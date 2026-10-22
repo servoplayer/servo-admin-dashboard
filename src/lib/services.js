@@ -1,4 +1,4 @@
-import { qs, request } from './api'
+import { emptyListOnNoSubscriptions, qs, request } from './api.js'
 
 // One function per existing backend endpoint. URLs, verbs and payloads match
 // what the dashboard already sent before the redesign.
@@ -20,8 +20,9 @@ export const devicesApi = {
 }
 
 export const subscriptionsApi = {
-  list: (page, opts) => request(`/subscription/getAll${qs({ page })}`, opts),
-  searchByMac: (macAddress, opts) => request(`/subscription/searchByMac${qs({ macAddress })}`, opts),
+  list: (page, opts) => request(`/subscription/getAll${qs({ page })}`, opts).then(emptyListOnNoSubscriptions),
+  searchByMac: (macAddress, opts) =>
+    request(`/subscription/searchByMac${qs({ macAddress })}`, opts).then(emptyListOnNoSubscriptions),
 }
 
 export const resellersApi = {
@@ -31,7 +32,8 @@ export const resellersApi = {
   create: (body) => request('/admin/createReseller', { method: 'POST', body }),
   update: (id, body) => request(`/reseller/update/${id}`, { method: 'PUT', body }),
   toggleBlock: (id) => request(`/admin/blockReseller/${id}`, { method: 'PUT' }),
-  subscriptions: (id, page, opts) => request(`/admin/resellerSubscriptions${qs({ page, id })}`, opts),
+  subscriptions: (id, page, opts) =>
+    request(`/admin/resellerSubscriptions${qs({ page, id })}`, opts).then(emptyListOnNoSubscriptions),
 }
 
 export const pricingApi = {

@@ -313,7 +313,7 @@ export default function Overview() {
                   </TableMessage>
                 ) : recent.length === 0 ? (
                   <TableMessage cols={5}>
-                    <EmptyState title="No transactions yet" description="Payments appear here once devices are activated." />
+                    <EmptyState title="No subscriptions found yet" description="Payments appear here once devices are activated." />
                   </TableMessage>
                 ) : (
                   recent.map((item, i) => {

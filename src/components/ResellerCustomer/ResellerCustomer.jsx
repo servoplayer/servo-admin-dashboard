@@ -87,7 +87,7 @@ export default function ResellerCustomer() {
             ) : rows.length === 0 ? (
               <TableMessage cols={4}>
                 <EmptyState
-                  title={needle ? 'No matching customers on this page' : 'No customers yet'}
+                  title={needle ? 'No matching customers on this page' : 'No subscriptions found yet'}
                   description={needle ? 'Clear the filter or check another page.' : 'Customers activated by this reseller will appear here.'}
                 />
               </TableMessage>

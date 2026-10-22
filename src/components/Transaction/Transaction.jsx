@@ -42,7 +42,7 @@ export default function Transaction() {
           ) : list.items.length === 0 ? (
             <TableMessage cols={6}>
               <EmptyState
-                title={list.searching || list.types.length ? 'No matching transactions' : 'No transactions yet'}
+                title={list.searching || list.types.length ? 'No matching transactions' : 'No subscriptions found yet'}
                 description={
                   list.searching || list.types.length
                     ? 'Check the MAC address or clear the filters.'
