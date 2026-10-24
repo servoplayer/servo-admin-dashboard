@@ -66,7 +66,7 @@ export function PaymentDialog({ mode, device, onClose, onDone }) {
       return
     }
     notify.success(res.message || (isRenew ? 'Subscription renewed.' : 'Device activated.'))
-    invalidate('devices', 'subscriptions')
+    invalidate('devices', 'subscriptions', 'stats', 'lookup')
     onDone?.()
     onClose()
   }
@@ -131,7 +131,7 @@ export function DeactivateDialog({ device, onClose, onDone }) {
       return
     }
     notify.success(res.message || 'Subscription stopped.')
-    invalidate('devices', 'subscriptions')
+    invalidate('devices', 'subscriptions', 'stats', 'lookup')
     onDone?.()
     onClose()
   }

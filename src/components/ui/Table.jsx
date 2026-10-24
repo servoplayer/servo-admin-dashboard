@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, ChevronsUpDown } from 'lucide-react'
 import { cx } from './cx'
 
 export function Table({ children, className, minWidth = 640, caption }) {
@@ -23,6 +23,39 @@ export function Th({ children, className, align = 'left' }) {
       )}
     >
       {children}
+    </th>
+  )
+}
+
+/**
+ * Header cell that sorts by `sortKey`. `sort` is `{ key, dir }`; clicking an
+ * unsorted column sorts ascending, clicking again flips the direction.
+ */
+export function SortTh({ children, sortKey, sort, onSort, className, align = 'left' }) {
+  const active = sort?.key === sortKey
+  const Icon = !active ? ChevronsUpDown : sort.dir === 'asc' ? ArrowUp : ArrowDown
+  return (
+    <th
+      scope="col"
+      aria-sort={active ? (sort.dir === 'asc' ? 'ascending' : 'descending') : 'none'}
+      className={cx(
+        'whitespace-nowrap border-b border-line bg-surface-2 px-3 py-1.5 first:pl-4 last:pr-4 sm:px-4 sm:first:pl-5 sm:last:pr-5',
+        align === 'right' ? 'text-right' : 'text-left',
+        className,
+      )}
+    >
+      <button
+        type="button"
+        onClick={() => onSort({ key: sortKey, dir: active && sort.dir === 'asc' ? 'desc' : 'asc' })}
+        className={cx(
+          '-mx-1.5 inline-flex items-center gap-1 rounded px-1.5 py-1 text-2xs font-semibold uppercase tracking-wider transition-colors hover:text-fg',
+          active ? 'text-fg' : 'text-muted',
+          align === 'right' && 'flex-row-reverse',
+        )}
+      >
+        {children}
+        <Icon size={12} className={active ? 'text-brand' : 'text-subtle'} aria-hidden="true" />
+      </button>
     </th>
   )
 }

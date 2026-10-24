@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react'
 import { useResource } from './resource'
-import { devicesApi, pricingApi, resellersApi, subscriptionsApi } from './services'
+import { devicesApi, pricingApi, resellersApi, statsApi, subscriptionsApi } from './services'
 import { daysUntil, EXPIRING_SOON_DAYS } from './format'
 
 // Shared read models. Keys are prefixes used by `invalidate()` after mutations.
@@ -9,6 +9,10 @@ export const usePaymentKeys = () => useResource('keys', pricingApi.getKeys)
 export const useDevicesFirstPage = () => useResource('devices:1', () => devicesApi.list(1))
 export const useRecentSubscriptions = () => useResource('subscriptions:1', () => subscriptionsApi.list(1))
 export const useResellers = () => useResource('resellers', resellersApi.list)
+export const useStats = () => useResource('stats', statsApi.overview)
+
+/** Exact total from a paged list response (`totalItems`), when the API sent one. */
+export const totalOf = (data) => data?.totalItems ?? data?.total ?? data?.count
 
 export const priceValue = (data) => data?.subscriptionPrice?.price
 

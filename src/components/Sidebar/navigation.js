@@ -1,4 +1,4 @@
-import { CreditCard, FileText, LayoutDashboard, MonitorSmartphone, ReceiptText, Settings, Users } from 'lucide-react'
+import { CreditCard, FileText, LayoutDashboard, MonitorSmartphone, ReceiptText, ScanSearch, Settings, Users } from 'lucide-react'
 
 // Single source of truth for the sidebar, page titles and breadcrumbs.
 // Every route that existed before the redesign is reachable from here.
@@ -18,6 +18,12 @@ export const NAV = [
         icon: MonitorSmartphone,
         alertIds: ['expiring', 'expired'],
         match: (path, params) => path === '/layout/customer' && params.get('tab') === 'devices',
+      },
+      {
+        label: 'Device lookup',
+        to: '/layout/device-lookup',
+        icon: ScanSearch,
+        match: (path) => path === '/layout/device-lookup',
       },
       {
         label: 'Transactions',
@@ -54,8 +60,8 @@ export const NAV = [
 
 /** Section + title (+ optional parent link) for the current location. */
 export function getPageMeta(pathname, params) {
-  if (pathname.startsWith('/layout/reseller/resellerCustomer/')) {
-    return { section: 'Partners', parent: { label: 'Resellers', to: '/layout/reseller' }, title: 'Reseller customers' }
+  if (pathname.startsWith('/layout/reseller/')) {
+    return { section: 'Partners', parent: { label: 'Resellers', to: '/layout/reseller' }, title: 'Reseller details' }
   }
   if (pathname === '/layout/providerCustomer') return { section: 'Customers', title: 'Provider customers' }
   for (const group of NAV) {

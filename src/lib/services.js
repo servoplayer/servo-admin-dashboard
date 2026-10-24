@@ -36,6 +36,11 @@ export const resellersApi = {
     request(`/admin/resellerSubscriptions${qs({ page, id })}`, opts).then(emptyListOnNoSubscriptions),
 }
 
+// Read-only aggregates for the overview charts (dashboard-only endpoint).
+export const statsApi = {
+  overview: (opts) => request('/admin/stats', opts),
+}
+
 export const pricingApi = {
   getPrice: (opts) => request('/price/get', { auth: false, ...opts }),
   setPrice: (price) => request('/price/add', { method: 'POST', body: { price } }),

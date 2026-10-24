@@ -58,8 +58,24 @@ export function formatDeviceType(type) {
   if (!type) return '—'
   const lower = String(type).toLowerCase()
   if (lower === 'lg') return 'LG'
+  if (lower === 'ios') return 'iOS'
+  if (lower === 'android_tv') return 'Android TV'
   return lower.charAt(0).toUpperCase() + lower.slice(1)
 }
+
+/**
+ * When a subscription record was created (i.e. paid). The API stores `time` as
+ * "HH:mm:ss" only, and a renewal's start date is the previous end date, so the
+ * creation time embedded in the MongoDB ObjectId is used; start date is the fallback.
+ */
+export function paidAt(item) {
+  const id = String(item?._id ?? '')
+  if (/^[a-f0-9]{24}$/i.test(id)) return new Date(parseInt(id.slice(0, 8), 16) * 1000)
+  return item?.subscriptionStartDate
+}
+
+/** Lifetime activations are stored with an end date in the year 3025. */
+export const isLifetime = (endDate) => (parseDate(endDate)?.getFullYear() ?? 0) >= 3000
 
 export const EXPIRING_SOON_DAYS = 30
 

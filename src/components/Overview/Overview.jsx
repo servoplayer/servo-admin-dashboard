@@ -23,9 +23,12 @@ import { EmptyState, ErrorState, Skeleton } from '../ui/States'
 import { SkeletonRows, Table, TableMessage, Td, Th, Tr } from '../ui/Table'
 import { useShell } from '../Layout/ShellContext'
 import useDeviceActions from '../Devices/useDeviceActions'
+import OverviewCharts from './OverviewCharts'
+import { isSubReseller } from '../../lib/resellers'
 import {
   priceValue,
   splitByExpiry,
+  totalOf,
   useDevicesFirstPage,
   usePaymentKeys,
   usePrice,
@@ -38,6 +41,7 @@ import {
   formatDate,
   formatDeviceType,
   formatNumber,
+  paidAt,
   relativeDays,
   subscriptionStatus,
 } from '../../lib/format'
@@ -91,7 +95,7 @@ function Kpi({ label, icon: Icon, value, sub, to, loading, error, tone }) {
 
 const QUICK_ACTIONS = [
   { label: 'Activate a device', hint: 'Start a yearly subscription', icon: Plus, to: '/layout/customer?tab=devices' },
-  { label: 'Find a device', hint: 'Search by MAC address', icon: Search, to: '/layout/customer?tab=devices', focusSearch: true },
+  { label: 'Look up a device', hint: 'Status, playlist and actions by MAC', icon: Search, to: '/layout/device-lookup' },
   { label: 'Add a reseller', hint: 'Create a partner account', icon: UserPlus, to: '/layout/reseller?new=1' },
   { label: 'Review transactions', hint: 'Payments and expiry dates', icon: ReceiptText, to: '/layout/customer?tab=transactions' },
   { label: 'Update pricing', hint: 'Activation price & keys', icon: Tag, to: '/layout/activation' },
@@ -116,6 +120,7 @@ export default function Overview() {
   // ---- KPI derivations (only from data the API actually returns) ----
   const resellerList = resellers.data?.allResellers ?? []
   const blocked = resellerList.filter((r) => r.block).length
+  const subCount = resellerList.filter(isSubReseller).length
 
   const p = priceValue(price.data)
   const priceSet = p !== undefined && p !== null && p !== '' && Number(p) > 0
@@ -127,7 +132,7 @@ export default function Overview() {
 
   const deviceList = devices.data?.users ?? []
   const deviceTotalPages = Number(devices.data?.totalPages) || 0
-  const exactDeviceTotal = devices.data?.total ?? devices.data?.totalUsers ?? devices.data?.count
+  const exactDeviceTotal = totalOf(devices.data)
   const deviceValue =
     exactDeviceTotal !== undefined
       ? formatNumber(exactDeviceTotal)
@@ -165,9 +170,11 @@ export default function Overview() {
           error={devices.error}
           value={deviceValue}
           sub={
-            deviceTotalPages > 1
-              ? `${deviceTotalPages} pages · ${subscribedOnPage} of ${deviceList.length} subscribed on page 1`
-              : `${subscribedOnPage} subscribed`
+            exactDeviceTotal !== undefined
+              ? 'Registered devices'
+              : deviceTotalPages > 1
+                ? `${deviceTotalPages} pages · ${subscribedOnPage} of ${deviceList.length} subscribed on page 1`
+                : `${subscribedOnPage} subscribed`
           }
         />
         <Kpi
@@ -177,7 +184,7 @@ export default function Overview() {
           loading={resellers.loading}
           error={resellers.error}
           value={formatNumber(resellerList.length)}
-          sub={blocked ? `${blocked} blocked` : 'None blocked'}
+          sub={`${formatNumber(resellerList.length - subCount)} main · ${formatNumber(subCount)} sub${blocked ? ` · ${blocked} blocked` : ''}`}
         />
         <Kpi
           label="Activation price"
@@ -200,6 +207,8 @@ export default function Overview() {
           sub={keysMissing ? 'Publishable or secret key missing' : 'Publishable & secret keys saved'}
         />
       </div>
+
+      <OverviewCharts />
 
       <div className="mt-5 grid grid-cols-1 gap-5 xl:grid-cols-3">
         <div className="space-y-5 xl:col-span-2">
@@ -323,12 +332,12 @@ export default function Overview() {
                         <Td>
                           <span className="block font-mono text-[13px]">{item.userId?.macAddress ?? '—'}</span>
                           <span className="mt-0.5 block text-xs text-muted md:hidden">
-                            {formatDeviceType(item.userId?.type)}<span className="sm:hidden"> · {formatDate(item.time)}</span>
+                            {formatDeviceType(item.userId?.type)}<span className="sm:hidden"> · {formatDate(paidAt(item))}</span>
                           </span>
                         </Td>
                         <Td className="hidden text-muted md:table-cell">{formatDeviceType(item.userId?.type)}</Td>
                         <Td align="right" className="font-semibold tabular">{formatAmount(item.cost)}</Td>
-                        <Td className="hidden whitespace-nowrap text-muted sm:table-cell">{formatDate(item.time)}</Td>
+                        <Td className="hidden whitespace-nowrap text-muted sm:table-cell">{formatDate(paidAt(item))}</Td>
                         <Td>
                           <Badge tone={status.tone}>{status.label}</Badge>
                         </Td>

@@ -5,7 +5,7 @@ import { Pagination, SkeletonRows, Table, TableMessage, Td, Th, Tr } from '../ui
 import ListToolbar, { ResultNote } from '../Customers/ListToolbar'
 import usePagedList from '../../lib/usePagedList'
 import { subscriptionsApi } from '../../lib/services'
-import { formatAmount, formatDate, formatDeviceType, subscriptionStatus } from '../../lib/format'
+import { formatAmount, formatDate, formatDeviceType, paidAt, subscriptionStatus } from '../../lib/format'
 
 const pick = (data) => ({ items: data?.subscriptions, totalPages: data?.totalPages })
 
@@ -58,7 +58,7 @@ export default function Transaction() {
                   <Td>
                     <span className="block font-mono text-[13px] font-semibold">{item.userId?.macAddress ?? '—'}</span>
                     <span className="mt-0.5 block text-xs text-muted md:hidden">
-                      {formatDeviceType(item.userId?.type)} · paid {formatDate(item.time)}
+                      {formatDeviceType(item.userId?.type)} · paid {formatDate(paidAt(item))}
                     </span>
                     <span className="mt-1 block sm:hidden">
                       <Badge tone={status.tone}>{status.label}</Badge>
@@ -66,7 +66,7 @@ export default function Transaction() {
                   </Td>
                   <Td className="hidden text-muted md:table-cell">{formatDeviceType(item.userId?.type)}</Td>
                   <Td align="right" className="font-semibold tabular">{formatAmount(item.cost)}</Td>
-                  <Td className="hidden whitespace-nowrap text-muted lg:table-cell">{formatDate(item.time, { withTime: true })}</Td>
+                  <Td className="hidden whitespace-nowrap text-muted lg:table-cell">{formatDate(paidAt(item), { withTime: true })}</Td>
                   <Td className="hidden whitespace-nowrap sm:table-cell">{formatDate(item.subscriptionEndDate)}</Td>
                   <Td className="hidden sm:table-cell">
                     <Badge tone={status.tone}>{status.label}</Badge>

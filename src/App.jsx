@@ -7,10 +7,11 @@ import Settings from './components/Settings/Settings'
 import EditContent from './components/EditContent/EditContent'
 import { ToastContainer } from 'react-toastify';
 import ProtectedRoutes from './components/ProtectedRoutes/ProtectedRoutes'
-import ResellerCustomer from './components/ResellerCustomer/ResellerCustomer'
 import ProviderCustomer from './components/ProviderCustomer/ProviderCustomer'
 import Activation from './components/Activation/Activation'
 import Overview from './components/Overview/Overview'
+import ResellerDetail, { LegacyResellerCustomerRedirect } from './components/ResellerDetail/ResellerDetail'
+import DeviceLookup from './components/DeviceLookup/DeviceLookup'
 
 const routes = createBrowserRouter([
 
@@ -71,10 +72,24 @@ const routes = createBrowserRouter([
           </ProtectedRoutes>
       },
       {
+        path: "reseller/:id",
+        element:
+          <ProtectedRoutes>
+            <ResellerDetail />
+          </ProtectedRoutes>
+      },
+      {
         path: "reseller/resellerCustomer/:id",
         element:
           <ProtectedRoutes>
-            <ResellerCustomer />
+            <LegacyResellerCustomerRedirect />
+          </ProtectedRoutes>
+      },
+      {
+        path: "device-lookup",
+        element:
+          <ProtectedRoutes>
+            <DeviceLookup />
           </ProtectedRoutes>
       },
       {
