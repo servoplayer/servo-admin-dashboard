@@ -21,6 +21,7 @@ const ACTIONS = {
   'credits.deduction': 'Removed credits',
   'role.grant': 'Granted distributor manager',
   'role.revoke': 'Revoked distributor manager',
+  'reseller.create': 'Created reseller',
 }
 const RESULT = {
   succeeded: { tone: 'success', label: 'Succeeded' },
@@ -72,6 +73,12 @@ function ActivityLog() {
                   <Td>
                     <span className="block font-semibold">{ACTIONS[e.action] ?? e.action}</span>
                     {e.details?.amount !== undefined && <span className="block text-xs text-muted tabular">{formatNumber(e.details.amount)} credits{e.details.reference ? ` · ${e.details.reference}` : ''}</span>}
+                    {e.action === 'reseller.create' && e.details?.email && (
+                      <span className="block text-xs text-muted">
+                        {e.details.email}
+                        {e.details.initialCredits ? ` · ${formatNumber(e.details.initialCredits)} starting credits` : ''}
+                      </span>
+                    )}
                     {e.details?.message && <span className="block text-xs text-muted">{e.details.message}</span>}
                   </Td>
                   <Td className="hidden sm:table-cell">{e.targetId ? names.get(e.targetId) ?? '—' : '—'}</Td>
