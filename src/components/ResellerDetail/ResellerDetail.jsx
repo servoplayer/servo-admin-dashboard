@@ -7,7 +7,9 @@ import {
   ChevronRight,
   Coins,
   CornerDownRight,
+  History,
   IdCard,
+  KeyRound,
   Minus,
   Pencil,
   Plus,
@@ -23,8 +25,9 @@ import { EmptyState, ErrorState, Skeleton } from '../ui/States'
 import { Table, Td, Th, Tr } from '../ui/Table'
 import ResellerCustomer from '../ResellerCustomer/ResellerCustomer'
 import { TypeBadge } from '../Reseller/Reseller'
-import { BlockDialog, CreditsDialog, ResellerForm } from '../Reseller/ResellerDialogs'
-import { totalOf, useResellers } from '../../lib/dashboardData'
+import { BlockDialog, CreditsDialog, ManagerRoleDialog, ResellerForm } from '../Reseller/ResellerDialogs'
+import CreditLedger from '../Credits/CreditLedger'
+import { managerIdsOf, totalOf, useManagers, useResellers } from '../../lib/dashboardData'
 import { withHierarchy } from '../../lib/resellers'
 import { useResource } from '../../lib/resource'
 import { resellersApi } from '../../lib/services'
@@ -99,7 +102,7 @@ function Profile({ reseller }) {
     ['Name', reseller.userName || '—'],
     ['Email', reseller.email],
     ['Account ID', <span key="id" className="font-mono text-[13px]">{reseller._id}</span>],
-    ['Type', reseller.type === 'sub' ? 'Sub-reseller' : 'Main reseller'],
+    ['Type', reseller.type === 'manager' ? 'Distributor manager (can recharge resellers; no customers)' : reseller.type === 'sub' ? 'Sub-reseller' : 'Main reseller'],
     [
       'Parent',
       reseller.parent ? (
@@ -108,6 +111,8 @@ function Profile({ reseller }) {
         </Link>
       ) : reseller.type === 'sub' ? (
         'Parent account not found'
+      ) : reseller.type === 'manager' ? (
+        'None'
       ) : (
         'None (main reseller)'
       ),
@@ -137,23 +142,33 @@ export default function ResellerDetail() {
   const { id } = useParams()
   const [params, setParams] = useSearchParams()
   const resellers = useResellers()
+  const managers = useManagers()
   const customers = useResource(`reseller-subs:${id}`, () => resellersApi.subscriptions(id, 1))
   const [editing, setEditing] = useState(false)
   const [blocking, setBlocking] = useState(false)
   const [creditMode, setCreditMode] = useState(null)
+  const [roleChange, setRoleChange] = useState(null) // null | true (grant) | false (revoke)
 
   const reseller = useMemo(
-    () => withHierarchy(resellers.data?.allResellers ?? []).find((r) => r._id === id) ?? null,
-    [resellers.data, id],
+    () => withHierarchy(resellers.data?.allResellers ?? [], managerIdsOf(managers)).find((r) => r._id === id) ?? null,
+    [resellers.data, managers, id],
   )
 
-  const tabs = [
-    { value: 'customers', label: 'Customers', icon: Users },
-    ...(reseller?.type === 'main' ? [{ value: 'subs', label: 'Sub-resellers', icon: UserPlus }] : []),
-    { value: 'profile', label: 'Profile', icon: IdCard },
-  ]
-  const tab = tabs.some((t) => t.value === params.get('tab')) ? params.get('tab') : 'customers'
-  const setTab = (value) => setParams(value === 'customers' ? {} : { tab: value })
+  const isManager = reseller?.type === 'manager'
+  // A distributor manager has no customers or credits of its own.
+  const tabs = isManager
+    ? [{ value: 'profile', label: 'Profile', icon: IdCard }]
+    : [
+        { value: 'customers', label: 'Customers', icon: Users },
+        ...(reseller?.type === 'main' ? [{ value: 'subs', label: 'Sub-resellers', icon: UserPlus }] : []),
+        { value: 'credits', label: 'Credit history', icon: History },
+        { value: 'profile', label: 'Profile', icon: IdCard },
+      ]
+  const firstTab = tabs[0].value
+  const tab = tabs.some((t) => t.value === params.get('tab')) ? params.get('tab') : firstTab
+  const setTab = (value) => setParams(value === firstTab ? {} : { tab: value })
+  // Only a main reseller without sub-resellers can become a manager (the API checks the same).
+  const canGrant = reseller?.type === 'main' && reseller.children.length === 0
 
   const back = (
     <Link to="/layout/reseller" className="mb-3 inline-flex items-center gap-1.5 text-[13px] font-semibold text-muted hover:text-brand">
@@ -216,6 +231,11 @@ export default function ResellerDetail() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          {isManager ? (
+            <Button variant="secondary" icon={KeyRound} onClick={() => setRoleChange(false)}>Revoke manager role</Button>
+          ) : canGrant ? (
+            <Button variant="secondary" icon={KeyRound} onClick={() => setRoleChange(true)}>Make distributor manager</Button>
+          ) : null}
           <Button variant="secondary" icon={Pencil} onClick={() => setEditing(true)}>Edit</Button>
           {reseller.block ? (
             <Button variant="secondary" icon={ShieldCheck} onClick={() => setBlocking(true)}>Unblock</Button>
@@ -229,12 +249,14 @@ export default function ResellerDetail() {
         <Stat
           label="Available credits"
           icon={Coins}
-          sub="1 per 1-year · 2 per lifetime activation"
+          sub={isManager ? 'Not used: managers cannot activate customers' : '1 per 1-year · 2 per lifetime activation'}
           action={
-            <>
-              <Button size="sm" icon={Plus} onClick={() => setCreditMode('add')}>Add</Button>
-              <Button size="sm" variant="secondary" icon={Minus} onClick={() => setCreditMode('remove')}>Remove</Button>
-            </>
+            isManager ? undefined : (
+              <>
+                <Button size="sm" icon={Plus} onClick={() => setCreditMode('add')}>Add</Button>
+                <Button size="sm" variant="secondary" icon={Minus} onClick={() => setCreditMode('remove')}>Remove</Button>
+              </>
+            )
           }
         >
           {formatNumber(reseller.subscriptionsNum)}
@@ -264,6 +286,8 @@ export default function ResellerDetail() {
           <ResellerCustomer id={id} />
         ) : tab === 'subs' ? (
           <SubResellers reseller={reseller} />
+        ) : tab === 'credits' ? (
+          <CreditLedger resellerId={id} />
         ) : (
           <Profile reseller={reseller} />
         )}
@@ -272,6 +296,7 @@ export default function ResellerDetail() {
       <ResellerForm open={editing} reseller={editing ? reseller : null} onClose={() => setEditing(false)} />
       <BlockDialog reseller={blocking ? reseller : null} onClose={() => setBlocking(false)} />
       <CreditsDialog reseller={creditMode ? reseller : null} mode={creditMode} onClose={() => setCreditMode(null)} />
+      <ManagerRoleDialog reseller={roleChange === null ? null : reseller} grant={roleChange === true} onClose={() => setRoleChange(null)} />
     </>
   )
 }

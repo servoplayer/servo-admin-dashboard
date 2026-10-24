@@ -12,6 +12,7 @@ import Activation from './components/Activation/Activation'
 import Overview from './components/Overview/Overview'
 import ResellerDetail, { LegacyResellerCustomerRedirect } from './components/ResellerDetail/ResellerDetail'
 import DeviceLookup from './components/DeviceLookup/DeviceLookup'
+import Credits from './components/Credits/Credits'
 
 const routes = createBrowserRouter([
 
@@ -83,6 +84,13 @@ const routes = createBrowserRouter([
         element:
           <ProtectedRoutes>
             <LegacyResellerCustomerRedirect />
+          </ProtectedRoutes>
+      },
+      {
+        path: "credits",
+        element:
+          <ProtectedRoutes>
+            <Credits />
           </ProtectedRoutes>
       },
       {

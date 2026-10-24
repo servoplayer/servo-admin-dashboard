@@ -8,19 +8,11 @@ export const isSubReseller = (r) => Boolean(r?.createdBy)
 export const CREDITS_HINT = 'Activation credits: 1 per 1-year activation, 2 per lifetime.'
 
 /**
- * Body for PUT /reseller/update/:id, built from the reseller as listed. The
- * password stays undefined (dropped from the JSON) so the current one is kept.
+ * Adds `type` ('main' | 'sub' | 'manager'), `parent` and `children` to every
+ * reseller from the flat list. `/reseller/get` does not return roles, so
+ * distributor managers are identified from /admin/distributorManagers.
  */
-export const updateBody = (reseller, overrides = {}) => ({
-  email: reseller.email,
-  password: undefined,
-  userName: reseller.userName,
-  subscriptionsNum: reseller.subscriptionsNum,
-  ...overrides,
-})
-
-/** Adds `type`, `parent` and `children` to every reseller from the flat list. */
-export function withHierarchy(list = []) {
+export function withHierarchy(list = [], managerIds = new Set()) {
   const byId = new Map(list.map((r) => [r._id, r]))
   const children = new Map()
   list.forEach((r) => {
@@ -30,7 +22,7 @@ export function withHierarchy(list = []) {
   })
   return list.map((r) => ({
     ...r,
-    type: isSubReseller(r) ? 'sub' : 'main',
+    type: managerIds.has(r._id) ? 'manager' : isSubReseller(r) ? 'sub' : 'main',
     parent: r.createdBy ? byId.get(r.createdBy) ?? null : null,
     children: children.get(r._id) ?? [],
   }))
@@ -59,7 +51,7 @@ export function sortResellers(list, key, dir = 'asc') {
     .map(([r]) => r)
 }
 
-/** Filters by free text (name/email/parent name), type (main|sub) and status (active|blocked). */
+/** Filters by free text (name/email/parent name), type (main|sub|manager) and status (active|blocked). */
 export function filterResellers(list, { q = '', type = 'all', status = 'all' } = {}) {
   const needle = q.trim().toLowerCase()
   return list.filter((r) => {

@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react'
 import { useResource } from './resource'
-import { devicesApi, pricingApi, resellersApi, statsApi, subscriptionsApi } from './services'
+import { creditsApi, devicesApi, pricingApi, resellersApi, statsApi, subscriptionsApi } from './services'
 import { daysUntil, EXPIRING_SOON_DAYS } from './format'
 
 // Shared read models. Keys are prefixes used by `invalidate()` after mutations.
@@ -10,6 +10,10 @@ export const useDevicesFirstPage = () => useResource('devices:1', () => devicesA
 export const useRecentSubscriptions = () => useResource('subscriptions:1', () => subscriptionsApi.list(1))
 export const useResellers = () => useResource('resellers', resellersApi.list)
 export const useStats = () => useResource('stats', statsApi.overview)
+export const useManagers = () => useResource('managers', creditsApi.managers)
+
+/** Ids of distributor manager accounts; empty while loading or if the server is not updated yet. */
+export const managerIdsOf = (managers) => new Set((managers.data?.managers ?? []).map((m) => m._id))
 
 /** Exact total from a paged list response (`totalItems`), when the API sent one. */
 export const totalOf = (data) => data?.totalItems ?? data?.total ?? data?.count

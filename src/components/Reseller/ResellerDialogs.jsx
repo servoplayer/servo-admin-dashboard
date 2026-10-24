@@ -1,12 +1,12 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Button from '../ui/Button'
 import Modal, { ConfirmDialog } from '../ui/Modal'
-import { Field, Input, PasswordInput } from '../ui/Field'
-import { resellersApi } from '../../lib/services'
+import { Field, Input, PasswordInput, Textarea } from '../ui/Field'
+import { creditsApi, resellersApi } from '../../lib/services'
 import { invalidate } from '../../lib/resource'
 import { notify } from '../../lib/notify'
 import { formatNumber } from '../../lib/format'
-import { CREDITS_HINT, updateBody } from '../../lib/resellers'
+import { CREDITS_HINT } from '../../lib/resellers'
 
 const EMPTY = { userName: '', email: '', password: '', subscriptionsNum: '' }
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -149,14 +149,22 @@ export function BlockDialog({ reseller, onClose }) {
   )
 }
 
+const MAX_CHANGE = 10000
+
+const newKey = () =>
+  globalThis.crypto?.randomUUID?.() ?? `k-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`
+
 /**
- * Adds or removes credits through the existing update endpoint, which stores
- * the new balance. Nothing else on the account changes.
+ * Adds or removes credits through the audited credit endpoints. Each change is
+ * recorded in the credit history with who made it; a retry of the same
+ * submission (same key) is never applied twice.
  */
 export function CreditsDialog({ reseller, mode, onClose }) {
   const [amount, setAmount] = useState('')
+  const [note, setNote] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const keyRef = useRef('')
   const open = Boolean(reseller && mode)
   const balance = Number(reseller?.subscriptionsNum) || 0
   const adding = mode === 'add'
@@ -164,26 +172,33 @@ export function CreditsDialog({ reseller, mode, onClose }) {
   useEffect(() => {
     if (open) {
       setAmount('')
+      setNote('')
       setError('')
+      keyRef.current = newKey()
     }
-  }, [open])
+  }, [open, mode])
 
   const n = Number(amount)
-  const valid = amount !== '' && Number.isInteger(n) && n > 0
+  const valid = amount !== '' && Number.isInteger(n) && n > 0 && n <= MAX_CHANGE
   const next = valid ? (adding ? balance + n : balance - n) : balance
 
   const submit = async () => {
-    if (!valid) return setError('Enter a whole number greater than 0.')
+    if (busy) return
+    if (!valid) return setError(`Enter a whole number from 1 to ${formatNumber(MAX_CHANGE)}.`)
     if (next < 0) return setError(`You can remove at most ${formatNumber(balance)} credits.`)
     setBusy(true)
-    const res = await resellersApi.update(reseller._id, updateBody(reseller, { subscriptionsNum: next }))
+    const call = adding ? creditsApi.recharge : creditsApi.deduct
+    const res = await call(reseller._id, n, keyRef.current, note.trim())
     setBusy(false)
     if (!res.ok) {
+      // The key is kept, so trying again cannot apply the change twice.
       notify.error(res.message)
       return
     }
-    notify.success(`${reseller.userName} now has ${formatNumber(next)} credits.`)
-    invalidate('resellers', 'stats')
+    const tx = res.data?.transaction
+    if (res.data?.duplicate) notify.info(res.message)
+    else notify.success(`${reseller.userName} now has ${formatNumber(tx?.balanceAfter)} credits. Reference ${tx?.reference}.`)
+    invalidate('resellers', 'stats', 'credit-tx')
     onClose()
   }
 
@@ -205,24 +220,63 @@ export function CreditsDialog({ reseller, mode, onClose }) {
         </>
       }
     >
-      <Field label="Amount" required error={error} hint={valid && next >= 0 ? `New balance: ${formatNumber(next)}` : undefined}>
-        {(p) => (
-          <Input
-            {...p}
-            type="number"
-            min="1"
-            step="1"
-            inputMode="numeric"
-            autoFocus
-            value={amount}
-            onChange={(e) => {
-              setAmount(e.target.value)
-              setError('')
-            }}
-            className="tabular"
-          />
-        )}
-      </Field>
+      <div className="space-y-4">
+        <Field label="Amount" required error={error} hint={valid && next >= 0 ? `New balance: ${formatNumber(next)}` : undefined}>
+          {(p) => (
+            <Input
+              {...p}
+              type="number"
+              min="1"
+              max={MAX_CHANGE}
+              step="1"
+              inputMode="numeric"
+              autoFocus
+              value={amount}
+              onChange={(e) => {
+                setAmount(e.target.value)
+                setError('')
+              }}
+              className="tabular"
+            />
+          )}
+        </Field>
+        <Field label="Note" hint="Optional. Saved in the credit history.">
+          {(p) => <Textarea {...p} rows={2} maxLength={200} value={note} onChange={(e) => setNote(e.target.value)} />}
+        </Field>
+      </div>
     </Modal>
+  )
+}
+
+/** Grants or revokes the distributor manager role (PUT /admin/distributorManager/:id). */
+export function ManagerRoleDialog({ reseller, grant, onClose }) {
+  const [busy, setBusy] = useState(false)
+  const confirm = async () => {
+    setBusy(true)
+    const res = await creditsApi.setManager(reseller._id, grant)
+    setBusy(false)
+    if (!res.ok) {
+      notify.error(res.message)
+      return
+    }
+    notify.success(res.message)
+    invalidate('resellers', 'managers', 'stats')
+    onClose()
+  }
+  return (
+    <ConfirmDialog
+      open={Boolean(reseller)}
+      onClose={onClose}
+      onConfirm={confirm}
+      loading={busy}
+      tone={grant ? 'primary' : 'danger'}
+      title={grant ? 'Make distributor manager?' : 'Remove distributor manager role?'}
+      confirmLabel={grant ? 'Grant role' : 'Revoke role'}
+      description={
+        grant
+          ? `${reseller?.userName} will sign in to the reseller portal as a distributor manager: they can view resellers and their balances, recharge them, and see the credit history. They will no longer be able to activate customers. They get no administrator access.`
+          : `${reseller?.userName} goes back to being a regular reseller and loses access to recharging and the credit history.`
+      }
+    />
   )
 }

@@ -1,4 +1,4 @@
-import { CreditCard, FileText, LayoutDashboard, MonitorSmartphone, ReceiptText, ScanSearch, Settings, Users } from 'lucide-react'
+import { CreditCard, FileText, History, LayoutDashboard, MonitorSmartphone, ReceiptText, ScanSearch, Settings, Users } from 'lucide-react'
 
 // Single source of truth for the sidebar, page titles and breadcrumbs.
 // Every route that existed before the redesign is reachable from here.
@@ -37,6 +37,7 @@ export const NAV = [
     section: 'Partners',
     items: [
       { label: 'Resellers', to: '/layout/reseller', icon: Users, match: (path) => path.startsWith('/layout/reseller') },
+      { label: 'Credit history', to: '/layout/credits', icon: History, match: (path) => path === '/layout/credits' },
     ],
   },
   {

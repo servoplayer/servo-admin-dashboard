@@ -9,7 +9,7 @@ import { EmptyState, ErrorState } from '../ui/States'
 import { SkeletonRows, SortTh, Table, TableMessage, Td, Th, Tr } from '../ui/Table'
 import { cx } from '../ui/cx'
 import { BlockDialog, ResellerForm } from './ResellerDialogs'
-import { useResellers } from '../../lib/dashboardData'
+import { managerIdsOf, useManagers, useResellers } from '../../lib/dashboardData'
 import { filterResellers, sortResellers, withHierarchy } from '../../lib/resellers'
 import { formatDate, formatNumber } from '../../lib/format'
 
@@ -17,6 +17,7 @@ const TYPE_FILTERS = [
   { value: 'all', label: 'All' },
   { value: 'main', label: 'Main' },
   { value: 'sub', label: 'Sub-resellers' },
+  { value: 'manager', label: 'Managers' },
 ]
 const STATUS_FILTERS = [
   { value: 'all', label: 'Any status' },
@@ -46,6 +47,7 @@ function Chips({ label, options, value, onChange }) {
 }
 
 export function TypeBadge({ reseller }) {
+  if (reseller.type === 'manager') return <Badge tone="warning" dot={false}>Distributor manager</Badge>
   return reseller.type === 'sub' ? (
     <Badge tone="info" dot={false}>Sub-reseller</Badge>
   ) : (
@@ -56,6 +58,7 @@ export function TypeBadge({ reseller }) {
 export default function Reseller() {
   const [params, setParams] = useSearchParams()
   const resellers = useResellers()
+  const managers = useManagers()
   const [search, setSearch] = useState('')
   const [formFor, setFormFor] = useState(null) // null = closed, {} = new, reseller = edit
   const [blockTarget, setBlockTarget] = useState(null)
@@ -84,10 +87,14 @@ export default function Reseller() {
       return next
     }, { replace: true })
 
-  const all = useMemo(() => withHierarchy(resellers.data?.allResellers ?? []), [resellers.data])
+  const all = useMemo(
+    () => withHierarchy(resellers.data?.allResellers ?? [], managerIdsOf(managers)),
+    [resellers.data, managers],
+  )
   const filtered = filterResellers(all, { q: search, type, status })
   const rows = sort ? sortResellers(filtered, sort.key, sort.dir) : filtered
   const subCount = all.filter((r) => r.type === 'sub').length
+  const managerCount = all.filter((r) => r.type === 'manager').length
   const filtering = Boolean(search.trim()) || type !== 'all' || status !== 'all'
 
   return (
@@ -97,7 +104,7 @@ export default function Reseller() {
         description={
           resellers.loading || resellers.error
             ? 'Partner accounts that activate Servo for their own customers.'
-            : `${formatNumber(all.length - subCount)} main resellers · ${formatNumber(subCount)} sub-resellers`
+            : `${formatNumber(all.length - subCount - managerCount)} main resellers · ${formatNumber(subCount)} sub-resellers${managerCount ? ` · ${formatNumber(managerCount)} distributor manager${managerCount > 1 ? 's' : ''}` : ''}`
         }
         actions={<Button icon={Plus} onClick={() => setFormFor({})}>New reseller</Button>}
       />

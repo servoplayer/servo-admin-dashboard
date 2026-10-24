@@ -36,6 +36,19 @@ export const resellersApi = {
     request(`/admin/resellerSubscriptions${qs({ page, id })}`, opts).then(emptyListOnNoSubscriptions),
 }
 
+// Audited credit changes and the distributor manager role. `idempotencyKey`
+// makes a retried submission safe: the API applies it only once.
+export const creditsApi = {
+  recharge: (resellerId, amount, idempotencyKey, note) =>
+    request('/admin/credits/recharge', { method: 'POST', body: { resellerId, amount, idempotencyKey, note: note || undefined } }),
+  deduct: (resellerId, amount, idempotencyKey, note) =>
+    request('/admin/credits/deduct', { method: 'POST', body: { resellerId, amount, idempotencyKey, note: note || undefined } }),
+  transactions: (page, resellerId, opts) => request(`/admin/credits/transactions${qs({ page, resellerId })}`, opts),
+  auditLog: (page, opts) => request(`/admin/auditLog${qs({ page })}`, opts),
+  managers: (opts) => request('/admin/distributorManagers', opts),
+  setManager: (resellerId, grant) => request(`/admin/distributorManager/${resellerId}`, { method: 'PUT', body: { grant } }),
+}
+
 // Read-only aggregates for the overview charts (dashboard-only endpoint).
 export const statsApi = {
   overview: (opts) => request('/admin/stats', opts),
